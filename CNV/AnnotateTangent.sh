@@ -1,0 +1,1 @@
+python /home/tao/taoqing/softwares/birdseed2vcf/TCGATangentAnnotation.py  --array_sample $2 --tangent_sample $2 --out $2.anno.txt  --tangent $1 --snp_annotation_file /home/tao/taoqing/softwares/birdseed2vcf/GenomeWideSNP_6.na30.annot.hg19.csv.pickle  --fasta /home/tao/taoqing/softwares/birdseed2vcf/hg19.fasta --add_chr
