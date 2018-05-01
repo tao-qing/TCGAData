@@ -74,4 +74,4 @@ cnvGeneMat<-output$cnvGeneMat
 write.table(cnvMatanno,paste0(spl_name,"_cnvMatanno.txt"),sep="\t",row.names=F)
 write.table(cnvGeneMat,paste0(spl_name,"_cnvGeneMat.txt"),quote=F,sep="\t",row.names=F)
 
-print (paste0("Copy number annotation of ",spl_name," Finshed!")
+print(paste0("Copy number annotation of ",spl_name," Finshed!"))
