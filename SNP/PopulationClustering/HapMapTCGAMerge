@@ -1,0 +1,12 @@
+#R, HapMap and TCGA shared SNPs
+hapmapsnp<-as.matrix(fread("hapmap3_r1_b37_fwd_consensus.qc.poly.recode.rmunmatch.bim",h=F))
+tcga<-as.matrix(fread("merge_tcga_brca_2663_snp_normal_maf0.05_HEW_autosome.rmunmatch.bim",h=F))
+overlaped<-intersect(hapmapsnp[,2],tcga[,2])
+fwrite(list(overlaped),"tcga_hapmap_overlaped_snps.txt",row.names=F,col.names=F,quote=F)
+
+
+#extract hapmap and TCGA merged SNPs
+plink1.9 --bfile hapmap3_r1_b37_fwd_consensus.qc.poly.recode.rmunmatch  --extract tcga_hapmap_overlaped_snps.txt --make-bed --out hapmap3_r1_b37_fwd_consensus.qc.poly.recode.rmunmatch_tcgashared_snps
+
+
+plink1.9 --bfile hapmap3_r1_b37_fwd_consensus.qc.poly.recode.rmunmatch --bmerge merge_tcga_brca_2663_snp_normal_maf0.05_HEW_autosome.rmunmatch --merge-mode 7 --make-bed --out merge_hapmap3_TCGA_model7
