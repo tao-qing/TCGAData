@@ -1,0 +1,32 @@
+1. Select all the samples for the follow analysis should include
+Sequencing model: 1 N vs 1 T, only consider the fresh frozen samples
+
+2.  Select all European’s samples for the following analysis should include
+Sequencing model: 1 N vs 1 T, only consider the fresh frozen samples, samples based on the PCA population clustering 
+
+
+Criteria and Procedure
+
+Tumor:
+#reasons of duplication:1. test both fresh frozen sample and FFPE sample; 2. test both primary tumor and metastasis tumor; 3. one tumor sample (TCGA-B6-A1KC) test twice 
+#So, just remove the duplicated FFPE samples and metastasis samples
+
+Normal:
+#reasons of duplication:1. test both blood sample (10A) and para normal tissue sample (11A); 2. sequenced both FFPE and FF para sample ; 3. one blood sample (TCGA-XX-A899) test twice 
+#total 55 samples with duplicate, among them: 2 sample with Duplicate FFPE; 1 sample with Duplicated blood; 52 sample with duplicated para
+#So, just remove the duplicated FFPE samples, blood and para samples
+
+sample rename with Plink1.9
+
+ped file including:
+Family ID
+Sample ID
+Paternal ID
+Maternal ID
+Sex (1=male; 2=female; other=unknown)
+Affection (0=unknown; 1=unaffected; 2=affected)
+Genotypes (space or tab separated, 2 for each marker. 0=missing)
+
+Rather than try to manually edit PED or FAM files (which is not advised), use these functions to change ID codes, sex and parental information for individuals in a fileset. The command
+plink --bfile mydata --update-ids recoded.txt --make-bed --out mydata2
+

@@ -1,0 +1,19 @@
+1. Select all the samples for the follow analysis should include
+Sequencing model: 1 N vs 1 T, only consider the fresh frozen samples
+
+2.  Select all European’s samples for the following analysis should include
+Sequencing model: 1 N vs 1 T, only consider the fresh frozen samples, samples based on the PCA population clustering 
+
+
+Criteria and Procedure
+
+Tumor:
+#reasons of duplication:1. test both fresh frozen sample and FFPE sample; 2. test both primary tumor and metastasis tumor; 3. one tumor sample (TCGA-B6-A1KC) test twice 
+#So, just remove the duplicated FFPE samples and metastasis samples
+
+Normal:
+#reasons of duplication:1. test both blood sample (10A) and para normal tissue sample (11A); 2. sequenced both FFPE and FF para sample ; 3. one blood sample (TCGA-XX-A899) test twice 
+#total 55 samples with duplicate, among them: 2 sample with Duplicate FFPE; 1 sample with Duplicated blood; 52 sample with duplicated para
+#So, just remove the duplicated FFPE samples, blood and para samples
+
+
