@@ -1,0 +1,16 @@
+#Germline copy number variation filtering
+path="/home/tao/taoqing/projects/sgi/TCGAArray6CNVEstimate/SelectedSamples/Normal";
+
+import os;
+
+pathDir =  os.listdir(path)
+
+for allDir in pathDir:
+        child = os.path.join('%s%s' % (filepath, allDir))
+         fopen = open(filename, 'r')
+
+for eachLine in fopen:
+        print "读取到得内容如下：",eachLine
+    fopen.close()
+
+
