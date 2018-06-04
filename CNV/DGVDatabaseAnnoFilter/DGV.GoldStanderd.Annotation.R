@@ -12,25 +12,29 @@ geneRangesold <- function(db, column="ENTREZID"){
 
 geneRanges <- function(db, column="ENTREZID"){
     #genes
-    g <- genes(db, columns=column)
+    g0 <- genes(db, columns=column)
+    g<-g0[which(seqnames(g0)%in%paste0("chr",c(1:22,"X","Y")))]
     col <- mcols(g)[[column]]
-    genes <- granges(g)[rep(seq_along(g), elementNROWS(col))]
+    genes <- g[rep(seq_along(g), elementNROWS(col))]
     mcols(genes)[[column]] <- as.character(unlist(col))
 
     #CDS
-    c <- cds(db, columns=column)
+    c0 <- cds(db, columns=column)
+    c<-c0[which(seqnames(c0)%in%paste0("chr",c(1:22,"X","Y")))]
     cdscol <- mcols(c)[[column]]
     cds <- granges(c)[rep(seq_along(c), elementNROWS(cdscol))]
     mcols(cds)[[column]] <- as.character(unlist(cdscol))
 
     #exon
-    e <- exons(db, columns=column)
+    e0 <- exons(db, columns=column)
+    e<-e0[which(seqnames(e0)%in%paste0("chr",c(1:22,"X","Y")))]
     exoncol <- mcols(e)[[column]]
     exon <- granges(e)[rep(seq_along(e), elementNROWS(exoncol))]
     mcols(exon)[[column]] <- as.character(unlist(exoncol))
 
     #promoters
-    p <- promoters(db, upstream=2000, downstream=200,columns=c("gene_id","tx_name"))
+    p0 <- promoters(db, upstream=2000, downstream=200,columns=c("gene_id","tx_name"))
+    p<-p0[which(seqnames(p0)%in%paste0("chr",c(1:22,"X","Y")))]
     procol <- mcols(p)[["gene_id"]]
     proms <- granges(p)[rep(seq_along(p), elementNROWS(procol))]
     mcols(proms)[["gene_id"]] <- as.character(unlist(procol))
@@ -38,7 +42,6 @@ geneRanges <- function(db, column="ENTREZID"){
     anno=list(genes=genes,cds=cds,exons=exon,promoters=proms)
     return(anno)
   }
-
 
 
 CNVanno <- function(query, subject,overlap=0.5, column="ENTREZID", ...){
@@ -54,29 +57,41 @@ CNVanno <- function(query, subject,overlap=0.5, column="ENTREZID", ...){
     hitedgenelist<-splitAsList(mcols(query)[[column]][queryHits(olaps)], f1)
     hitedgenelistSep<-unlist(lapply(hitedgenelist,function(x)paste(unique(x),collapse = "|")))
     cnvMatanno<-cbind(cnvMat,hitedgenelistSep)
+    if(any(hitedgenelistSep=="")){
+      cnvMatanno<-cnvMatanno[-which(hitedgenelistSep==""),]
+    }
 	lens=dim(cnvMatanno)[2]
 
-    for(i in 1:dim(cnvMatanno)[1]){
-      iterm<-as.character(as.matrix(cnvMatanno[i,]))
-      genes=unlist(strsplit(iterm[lens],split="\\|"))
-      if(i==1){
-        cnvGeneMat<-cbind(matrix(rep(as.character(iterm[1:lens]),length(genes)),ncol=lens,byrow=T),genes)
-       # mergegene<-genes
-      }else{
-        cnvGeneMat<-rbind(cnvGeneMat,cbind(matrix(rep(as.character(iterm[1:lens]),length(genes)),ncol=lens,byrow=T),genes))
-      #  mergegene<-c(mergegene,genes)
-      }
-	print (i)
-    }
-     
+  # for(i in 1:dim(cnvMatanno)[1]){
+  #    iterm<-as.character(as.matrix(cnvMatanno[i,]))
+  #    genes=unlist(strsplit(iterm[lens],split="\\|"))
+  #    if(i==1){
+  #      cnvGeneMat<-cbind(matrix(rep(as.character(iterm[1:lens]),length(genes)),ncol=lens,byrow=T),genes)
+  #     # mergegene<-genes
+  #    }else{
+  #      cnvGeneMat<-rbind(cnvGeneMat,cbind(matrix(rep(as.character(iterm[1:lens]),length(genes)),ncol=lens,byrow=T),genes))
+  #    #  mergegene<-c(mergegene,genes)
+  #    }
+	#print (i)
+  #  }
+	require(foreach)
+	require(doParallel)
+	registerDoParallel(cores=30)
+	
+	cnvGeneMat=foreach(i=c(1:dim(cnvMatanno)[1]),.combine = "rbind")%dopar%{
+	  print(i)
+	  iterm<-as.character(as.matrix(cnvMatanno[i,]))
+	  genes=unlist(strsplit(iterm[lens],split="\\|"))
+	  cbind(matrix(rep(as.character(iterm[1:lens]),length(genes)),ncol=lens,byrow=T),genes)
+	}   
     #cnvGeneMat[,9]<-mergegene
     cnvGeneMat<-as.data.frame(cnvGeneMat[,-5])
-    colnames(cnvGeneMat)<-c("Chr","Start","End","VariantType","SVStatus","NumberofVariants","NumberofStudies","NumberofSamples","TotalSamples","Frequency","African","Asia","European","Mexican","MiddleEast","NativeAmerican","NorthAmerican","Oceania","SourthAmerican","Turkish","Admixed","Unkown","Info","Gene")
+    colnames(cnvGeneMat)<-c("Chr","Start","End","Length","VariantType","SVStatus","NumberofVariants","NumberofStudies","NumberofSamples","TotalSamples","Frequency","African","Asia","European","Mexican","MiddleEast","NativeAmerican","NorthAmerican","Oceania","SourthAmerican","Turkish","Admixed","Unkown","Info","Anno","Genes")
     if(any(cnvGeneMat$Genes=="NA")){
       cnvGeneMat<-cnvGeneMat[-which(cnvGeneMat$Genes=="NA"),]
     }
     cnvGeneMat<- apply(cnvGeneMat,2,as.character)
-    return(list(cnvMatanno=cnvMatanno,cnvGeneMat=cnvGeneMat))
+    return(list(cnvMatanno=cnvMatanno,cnvGeneMat=cnvGeneMat,lens=lens))
 }
 
 #parameters
@@ -97,60 +112,58 @@ annotation = geneRanges(Homo.sapiens, column="SYMBOL")
 
 #genelevel
 gns=annotation$genes
-geneOut = CNVanno(gns, cnv, "SYMBOL",overlap=0.4)
+geneOut = CNVanno(gns, cnv, "SYMBOL",overlap=0.1)
+gns_cnvMatanno<-geneOut$cnvMatanno
+gns_cnvGeneMat<-geneOut$cnvGeneMat
+lens<-geneOut$lens
+gns_cnvGeneMat<-cbind(gns_cnvGeneMat,lapply(mget(as.character(gns_cnvGeneMat[,(lens)]),envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
+colnames(gns_cnvGeneMat)[lens+1]<-"gene_id"
+fwrite(gns_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_genelevel.txt",quote=F,sep="\t",row.names=F)
+fwrite(gns_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_genelecel.txt",quote=F,sep="\t",row.names=F)
+
+
 
 #cds level
 cds=annotation$cds
-cdsOut = CNVanno(cds, cnv, "SYMBOL",overlap=1)
+cdsOut = CNVanno(cds, cnv, "SYMBOL",overlap=0.1)
+cds_cnvMatanno<-cdsOut$cnvMatanno
+cds_cnvGeneMat<-cdsOut$cnvGeneMat
+lens<-cdsOut$lens
+cds_cnvGeneMat<-cbind(cds_cnvGeneMat,lapply(mget(as.character(cds_cnvGeneMat[,(lens)]),envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
+colnames(cds_cnvGeneMat)[lens+1]<-"gene_id"
+
+fwrite(cds_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_cdslevel.txt",quote=F,sep="\t",row.names=F)
+fwrite(cds_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_cdslevel.txt",quote=F,sep="\t",row.names=F)
+
 
 #exon level
 exons=annotation$exons
-exonsOut = CNVanno(exons, cnv, "SYMBOL",overlap=1)
-
-#promoters level
-proms=annotation$promoters
-promsOut = CNVanno(proms, cnv, "gene_id",overlap=0.4)
-
-
-
-#rawmat[,2]<-paste0("chr",rawmat[,2])
-gns_cnvMatanno<-geneOut$cnvMatanno
-gns_cnvGeneMat<-geneOut$cnvGeneMat
-gns_cnvGeneMat<-cbind(gns_cnvGeneMat,lapply(mget(x=gns_cnvGeneMat[,(lens+1)],envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
-colnames(gns_cnvGeneMat)[lens+2]<-"gene_id"
-
-
-cds_cnvMatanno<-cdsOut$cnvMatanno
-cds_cnvGeneMat<-cdsOut$cnvGeneMat
-cds_cnvGeneMat<-cbind(cds_cnvGeneMat,lapply(mget(x=cds_cnvGeneMat[,(lens+1)],envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
-colnames(cds_cnvGeneMat)[lens+2]<-"gene_id"
-
+exonsOut = CNVanno(exons, cnv, "SYMBOL",overlap=0.1)
 
 exon_cnvMatanno<-exonsOut$cnvMatanno
 exon_cnvGeneMat<-exonsOut$cnvGeneMat
-exon_cnvGeneMat<-cbind(exon_cnvGeneMat,lapply(mget(x=exon_cnvGeneMat[,(lens+1)],envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
-colnames(exon_cnvGeneMat)[lens+2]<-"gene_id"
+lens<-exonsOut$lens
+exon_cnvGeneMat<-cbind(exon_cnvGeneMat,lapply(mget(as.character(exon_cnvGeneMat[,(lens)]),envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
+colnames(exon_cnvGeneMat)[lens+1]<-"gene_id"
 
+fwrite(exon_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_exonlevel.txt",quote=F,sep="\t",row.names=F)
+fwrite(exon_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_exonlevel.txt",quote=F,sep="\t",row.names=F)
+
+
+#promoters level
+proms=annotation$promoters
+promsOut = CNVanno(proms, cnv, "gene_id",overlap=0.1)
 
 require(annotate)
 proms_cnvMatanno<-promsOut$cnvMatanno
 proms_cnvGeneMat<-promsOut$cnvGeneMat
-proms_cnvGeneMat<-cbind(proms_cnvGeneMat[,1:lens],lapply(getSYMBOL(proms_cnvGeneMat[,1:(lens+1)], data='org.Hs.eg'),function(x)paste(unique(x),collapse = "|")),proms_cnvGeneMat[,(lens+1)])
-colnames(proms_cnvGeneMat)[c((lens+1),(lens+2)]<-c("Gene","gene_id")
+lens<-promsOut$lens
+proms_cnvGeneMat<-cbind(proms_cnvGeneMat[,1:lens-1],lapply(getSYMBOL(proms_cnvGeneMat[,(lens)], data='org.Hs.eg'),function(x)paste(unique(x),collapse = "|")),proms_cnvGeneMat[,(lens)])
+colnames(proms_cnvGeneMat)[c((lens),(lens+1))]<-c("Gene","gene_id")
+
+fwrite(proms_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_promoterlevel.txt",quote=F,sep="\t",row.names=F)
+fwrite(as.data.frame(proms_cnvGeneMat),"DGV_GoldStanderd_cnvGeneMat_promoterlevel.txt",quote=F,sep="\t",row.names=F)
 
 
-write.table(gns_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_genelevel.txt",sep="\t",row.names=F)
-write.table(gns_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_genelecel.txt",quote=F,sep="\t",row.names=F)
-
-write.table(cds_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_cdslevel.txt",sep="\t",row.names=F)
-write.table(cds_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_cdslevel.txt",quote=F,sep="\t",row.names=F)
-
-write.table(exon_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_exonlevel.txt",sep="\t",row.names=F)
-write.table(exon_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_exonlevel.txt",quote=F,sep="\t",row.names=F)
-
-write.table(proms_cnvMatanno,"DGV_GoldStanderd_cnvMatanno_promoterlevel.txt",sep="\t",row.names=F)
-write.table(proms_cnvGeneMat,"DGV_GoldStanderd_cnvGeneMat_promoterlevel.txt",quote=F,sep="\t",row.names=F)
-
-
+save.image("DGV.GoldStanderd.Annotation.RData")
 print (paste0("Copy number annotation of  Finshed!"))
-
