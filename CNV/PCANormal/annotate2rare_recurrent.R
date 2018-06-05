@@ -50,7 +50,7 @@ CNVFilter <- function(query,subject,overlap=0.7,label,column="ENTREZID", ...){
     return(list(cnvMatRecurrent=cnvMatRecurrent,cnvMatRare=cnvMatRare))
 }
 
-CNVAnno <- function(query,subject,overlap=0.1,label,column="ENTREZID", ...){
+CNVAnno <- function(query,subject,overlap=0.1,label,type,column="ENTREZID", ...){
     hits <- findOverlaps(query, subject)
     overlaps <- pintersect(query[queryHits(hits)], subject[subjectHits(hits)])
     percentOverlap <- width(overlaps) / width(subject[subjectHits(hits)])
@@ -82,14 +82,16 @@ CNVAnno <- function(query,subject,overlap=0.1,label,column="ENTREZID", ...){
       cnvGeneMat<-cnvGeneMat[-which(cnvGeneMat$Genes=="NA"),]
     }
     cnvGeneMat<- apply(cnvGeneMat,2,as.character)
+    
     if(type=="genes"||type=="cds"||type=="exon"){
       cnvGeneMat<-cbind(cnvGeneMat,lapply(mget(x=cnvGeneMat[,(lens)],envir=org.Hs.egALIAS2EG),function(x)paste(unique(x),collapse = "|")))
       colnames(cnvGeneMat)[lens+1]<-"gene_id"
     }
       
     if(type=="promoters"){
-      cnvGeneMat<-cbind(cnvGeneMat[,1:lens-1],lapply(getSYMBOL(cnvGeneMat[,1:(lens)], data='org.Hs.eg'),function(x)paste(unique(x),collapse = "|")),cnvGeneMat[,(lens)])
-      colnames(proms_cnvGeneMat)[c((lens),(lens+1))]<-c("Gene","gene_id")
+      require(annotate)
+      cnvGeneMat<-cbind(cnvGeneMat[,1:(lens-1)],unlist(lapply(getSYMBOL(cnvGeneMat[,lens], data='org.Hs.eg'),function(x)paste(unique(x),collapse = "|"))),cnvGeneMat[,(lens)])
+      colnames(cnvGeneMat)[c((lens),(lens+1))]<-c("Gene","gene_id")
     }
     
     fwrite(cnvMatanno,paste0(label,"cnvMatanno_",type,"level.txt"),sep="\t",row.names=F)
@@ -154,15 +156,17 @@ PCAGDV_RecLoss_OverlapMatCDSAnno <- CNVAnno(annotation$cds,PCAGDV_RecLoss_Overla
 PCAGDV_RareGain_OverlapMatCDSAnno <- CNVAnno(annotation$cds,PCAGDV_RareGain_OverlapMat,label="PCANormal_CNV_Rare_Gain_",overlap=0.1,column="SYMBOL",type="cds")
 PCAGDV_RareLoss_OverlapMatCDSAnno <- CNVAnno(annotation$cds,PCAGDV_RareLoss_OverlapMat,label="PCANormal_CNV_Rare_Loss_",overlap=0.1,column="SYMBOL",type="cds")
 
-
 PCAGDV_RecGain_OverlapMatExonAnno <- CNVAnno(annotation$exons,PCAGDV_RecGain_OverlapMat,label="PCANormal_CNV_Recurrent_Gain_",overlap=0.1,column="SYMBOL",type="exon")
 PCAGDV_RecLoss_OverlapMatExonAnno <- CNVAnno(annotation$exons,PCAGDV_RecLoss_OverlapMat,label="PCANormal_CNV_Recurrent_Loss_",overlap=0.1,column="SYMBOL",type="exon")
 PCAGDV_RareGain_OverlapMatExonAnno <- CNVAnno(annotation$exons,PCAGDV_RareGain_OverlapMat,label="PCANormal_CNV_Rare_Gain_",overlap=0.1,column="SYMBOL",type="exon")
 PCAGDV_RareLoss_OverlapMatExonAnno <- CNVAnno(annotation$exons,PCAGDV_RareLoss_OverlapMat,label="PCANormal_CNV_Rare_Loss_",overlap=0.1,column="SYMBOL",type="exon")
 
-PCAGDV_RecGain_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RecGain_OverlapMat,label="PCANormal_CNV_Recurrent_Gain_",overlap=0.1,column="SYMBOL",type="promoters")
-PCAGDV_RecLoss_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RecLoss_OverlapMat,label="PCANormal_CNV_Recurrent_Loss_",overlap=0.1,column="SYMBOL",type="promoters")
-PCAGDV_RareGain_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RareGain_OverlapMat,label="PCANormal_CNV_Rare_Gain_",overlap=0.1,column="SYMBOL",type="promoters")
-PCAGDV_RareLoss_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RareLoss_OverlapMat,label="PCANormal_CNV_Rare_Loss_",overlap=0.1,column="SYMBOL",type="promoters")
-
+PCAGDV_RecGain_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RecGain_OverlapMat,label="PCANormal_CNV_Recurrent_Gain_",overlap=0.1,column="gene_id",type="promoters")
+PCAGDV_RecLoss_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RecLoss_OverlapMat,label="PCANormal_CNV_Recurrent_Loss_",overlap=0.1,column="gene_id",type="promoters")
+PCAGDV_RareGain_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RareGain_OverlapMat,label="PCANormal_CNV_Rare_Gain_",overlap=0.1,column="gene_id",type="promoters")
+PCAGDV_RareLoss_OverlapMatPromotersAnno <- CNVAnno(annotation$promoters,PCAGDV_RareLoss_OverlapMat,label="PCANormal_CNV_Rare_Loss_",overlap=0.1,column="gene_id",type="promoters")
+#query=annotation$promoters;subject=PCAGDV_RareLoss_OverlapMat;label="PCANormal_CNV_Rare_Loss_";overlap=0.1;column="SYMBOL";type="promoters"
 #"SYMBOL","gene_id",annotation$cds,annotation$exons,annotation$promoters
+save.image("PCANormal_CNV_Classification.RData")
+
+
